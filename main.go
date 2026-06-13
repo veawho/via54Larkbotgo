@@ -1,4 +1,4 @@
-// feishu-bot-go — 飞书 WS 长连接 bot (Go skeleton)
+// via54Larkbotgo — 飞书 WS 长连接 bot (Go skeleton)
 //
 // 替代 /Users/david/.hermes/scripts/feishu_bot_daemon.py (851 行 Python).
 //
@@ -9,7 +9,7 @@
 //   - 写 /tmp/hermes_inbox/<msg_id>.json (inbox_watcher.py 消费)
 //   - outbox watcher 轮询 /tmp/hermes_outbox → ch.Send → 飞书
 //
-// 启动: ./feishu-bot-go --app-id cli_xxx --app-secret yyy
+// 启动: ./via54Larkbotgo --app-id cli_xxx --app-secret yyy
 //
 // TODO (留给后续 PR,skeleton 不实现):
 //   - name cache (/tmp/feishu_user_name_cache.json)
@@ -232,7 +232,7 @@ func main() {
 	go runOutboxWatcher(ctx, ch)
 
 	// 7. 启动 WS (阻塞)
-	log.Printf("feishu-bot-go starting, app_id=%s...", truncate(*appID, 12))
+	log.Printf("via54Larkbotgo starting, app_id=%s...", truncate(*appID, 12))
 	if err := ch.Start(ctx); err != nil {
 		log.Fatalf("channel start: %v", err)
 	}

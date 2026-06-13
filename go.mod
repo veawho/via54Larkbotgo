@@ -1,4 +1,4 @@
-module github.com/david/feishu-bot-go
+module github.com/david/via54Larkbotgo
 
 go 1.26.4
 

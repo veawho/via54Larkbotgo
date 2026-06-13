@@ -1,4 +1,4 @@
-# feishu-bot-go
+# via54Larkbotgo
 
 > **飞书 (Feishu/Lark) WS 长连接 bot,Go 改写中**
 
@@ -18,10 +18,10 @@ Go skeleton,目标是**完全替代** [`/Users/david/.hermes/scripts/feishu_bot_
 ## 目录
 
 ```
-feishu-bot-go/
+via54Larkbotgo/
 ├── main.go                        # skeleton: WS connect + Channel + inbox writer + outbox poller
 ├── go.mod / go.sum                # larksuite/oapi-sdk-go/v3 + transitive deps
-├── bin/feishu-bot-go              # 已编译 binary (gitignored)
+├── bin/via54Larkbotgo             # 已编译 binary (gitignored)
 │
 ├── reference/                     # 拆自 via54Larkfix 仓库的"参考真相源"
 │   ├── python-original/
@@ -56,20 +56,20 @@ feishu-bot-go/
 cd /Users/david/Desktop/developments
 gh repo sync veawho/via54Larkfix   # 拉 Larkfix 最新
 cp via54Larkfix/common/bot/feishu_bot_daemon.py \
-   feishu-bot-go/reference/python-original/feishu_bot_daemon.py
+   via54Larkbotgo/reference/python-original/feishu_bot_daemon.py
 cp via54Larkfix/bot/feishu_bot_daemon.py \
-   feishu-bot-go/reference/python-original/cli_bot_group.py
+   via54Larkbotgo/reference/python-original/cli_bot_group.py
 cp via54Larkfix/references/feishu_inbox_protocol.md \
-   feishu-bot-go/reference/protocol/feishu_inbox_protocol.md
+   via54Larkbotgo/reference/protocol/feishu_inbox_protocol.md
 md5 -q via54Larkfix/common/bot/feishu_bot_daemon.py \
-       feishu-bot-go/reference/python-original/feishu_bot_daemon.py
+       via54Larkbotgo/reference/python-original/feishu_bot_daemon.py
 # 期望: 两次 md5 一致
 ```
 
 ## 部署(待实现)
 
 跟 Python daemon 共用 launchd plist 路径 (`~/Library/LaunchAgents/com.david.feishu-bot.plist`),但需要:
-1. 重写 plist 的 `ProgramArguments` 从 `~/.local/bin/feishu` 改成 `~/Desktop/developments/feishu-bot-go/bin/feishu-bot-go`
+1. 重写 plist 的 `ProgramArguments` 从 `~/.local/bin/feishu` 改成 `~/Desktop/developments/via54Larkbotgo/bin/via54Larkbotgo`
 2. 同样的 `EnvironmentVariables` (FEISHU_BOT_APP_ID, ALLOWED_CHATS)
 3. venv 依赖变成 go binary 自包含,不需要 `~/.local/share/feishu-cli/venv/`
 
