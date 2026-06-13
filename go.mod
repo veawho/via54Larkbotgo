@@ -1,4 +1,4 @@
-module github.com/david/via54Larkbotgo
+module github.com/veawho/via54Larkbotgo
 
 go 1.26.4
 
