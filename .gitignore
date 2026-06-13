@@ -1,0 +1,15 @@
+# Build artifacts
+bin/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go
+*.test
+*.out
