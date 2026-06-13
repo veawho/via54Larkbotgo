@@ -13,3 +13,7 @@ bin/
 # Go
 *.test
 *.out
+
+# VitePress build (do NOT commit — same pattern as via54Skills)
+docs/.vitepress/dist/
+docs/.vitepress/cache/
