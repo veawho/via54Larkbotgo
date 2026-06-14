@@ -34,7 +34,7 @@ via54Larkbotgo/
 ├── reference/                         # 拆自 via54Larkfix 的"协议真相源"
 │   ├── python-original/
 │   │   ├── feishu_bot_daemon.py       # 419 行, 完整 Python daemon (被 Go 替代的对象)
-│   │   └── cli_bot_group.py           # 163 行, Click "feishu bot start --foreground"
+│   │   └── feishu_cli_bot_group.py    # 163 行, Click group "feishu bot start --foreground" (源自 Larkfix root bot/feishu_bot_daemon.py)
 │   └── protocol/
 │       ├── feishu_inbox_protocol.md   # 22 KB, IPC 契约
 │       └── inbox_schema.md            # 字段速查表
@@ -74,4 +74,5 @@ via54Larkbotgo/
 - [`veawho/via54Skills`](https://github.com/veawho/via54Skills) — 高价值 skills 集合(含飞书集成 skill)
 - [`veawho/via54Design`](https://github.com/veawho/via54Design) — Go 设计引擎(本机二进制装在 `~/.local/bin/via54`)
 - 本机飞书 daemon: `~/.hermes/scripts/feishu_bot_daemon.py` (Python, v20.7, 851 行)
-- 本机 inbox 桥: `~/.hermes/scripts/inbox_watcher.py` (Python, fsnotify enabled)
+- 本机 inbox 桥: `~/.hermes/scripts/inbox_watcher.py` (Python, fsnotify enabled)/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
+/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory

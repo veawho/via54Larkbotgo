@@ -40,7 +40,7 @@ via54Larkbotgo/
 ├── reference/                         # protocol-of-truth sourced from via54Larkfix
 │   ├── python-original/
 │   │   ├── feishu_bot_daemon.py       # 419 lines, full Python daemon (the Go replacement target)
-│   │   └── cli_bot_group.py           # 163 lines, Click "feishu bot start --foreground"
+│   │   └── feishu_cli_bot_group.py    # 163 lines, Click "feishu bot start --foreground" (sourced from Larkfix root bot/feishu_bot_daemon.py)
 │   └── protocol/
 │       ├── feishu_inbox_protocol.md   # 22 KB, IPC contract
 │       └── inbox_schema.md            # field quick-reference
@@ -80,4 +80,5 @@ via54Larkbotgo/
 - [`veawho/via54Skills`](https://github.com/veawho/via54Skills) — high-value skills (including Feishu integration skill)
 - [`veawho/via54Design`](https://github.com/veawho/via54Design) — Go design engine (binary at `~/.local/bin/via54`)
 - Local Feishu daemon: `~/.hermes/scripts/feishu_bot_daemon.py` (Python, v20.7, 851 lines)
-- Local inbox bridge: `~/.hermes/scripts/inbox_watcher.py` (Python, fsnotify enabled)
+- Local inbox bridge: `~/.hermes/scripts/inbox_watcher.py` (Python, fsnotify enabled)/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
+/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory

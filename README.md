@@ -26,7 +26,7 @@ via54Larkbotgo/
 ├── reference/                     # 拆自 via54Larkfix 仓库的"参考真相源"
 │   ├── python-original/
 │   │   ├── feishu_bot_daemon.py   # 419 行, 完整 daemon (被 Go 替代的对象)
-│   │   └── cli_bot_group.py       # 163 行, Click group "feishu bot start --foreground"
+│   │   └── feishu_cli_bot_group.py    # 163 行, Click group "feishu bot start --foreground" (源自 Larkfix root bot/feishu_bot_daemon.py)
 │   └── protocol/
 │       ├── feishu_inbox_protocol.md   # 22 KB, IPC 契约 (paths + schema + state machine)
 │       └── inbox_schema.md            # 字段速查表 (auto-generated 摘要)
@@ -58,7 +58,7 @@ gh repo sync veawho/via54Larkfix   # 拉 Larkfix 最新
 cp via54Larkfix/common/bot/feishu_bot_daemon.py \
    via54Larkbotgo/reference/python-original/feishu_bot_daemon.py
 cp via54Larkfix/bot/feishu_bot_daemon.py \
-   via54Larkbotgo/reference/python-original/cli_bot_group.py
+   via54Larkbotgo/reference/python-original/feishu_cli_bot_group.py
 cp via54Larkfix/references/feishu_inbox_protocol.md \
    via54Larkbotgo/reference/protocol/feishu_inbox_protocol.md
 md5 -q via54Larkfix/common/bot/feishu_bot_daemon.py \
@@ -78,4 +78,7 @@ md5 -q via54Larkfix/common/bot/feishu_bot_daemon.py \
 - [`veawho/via54Larkfix`](https://github.com/veawho/via54Larkfix) — 飞书完整归档(本仓库的协议真相源)
 - `~/.hermes/scripts/feishu_bot_daemon.py` — 当前在跑的实现(替代前)
 - `~/.hermes/scripts/inbox_watcher.py` — Go producer 的 consumer
-- `via54goport` skill — Python → Go 改写评估流程
+- `via54goport` skill — Python → Go 改写评估流程/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
+/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory
+/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
+/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory
