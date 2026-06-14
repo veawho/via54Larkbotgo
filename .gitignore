@@ -14,6 +14,11 @@ bin/
 *.test
 *.out
 
+# Node (VitePress SSG) — do NOT commit, GitHub Actions will npm install
+node_modules/
+
 # VitePress build (do NOT commit — same pattern as via54Skills)
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
+/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory
