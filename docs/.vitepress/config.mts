@@ -181,10 +181,12 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/zh/' },
+          { text: 'Skills', link: '/zh/skills/via54feishu' },
           { text: 'English', link: '/en/' },
         ],
         sidebar: {
           '/zh/': zhSidebar,
+          '/zh/skills/': zhSidebar,
           '/zh/guides/': zhSidebar,
           '/zh/reference/': zhSidebar,
           '/zh/protocol/': zhSidebar,
@@ -201,10 +203,12 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/en/' },
+          { text: 'Skills', link: '/en/skills/via54feishu' },
           { text: '中文', link: '/zh/' },
         ],
         sidebar: {
           '/en/': enSidebar,
+          '/en/skills/': enSidebar,
           '/en/guides/': enSidebar,
           '/en/reference/': enSidebar,
           '/en/protocol/': enSidebar,
