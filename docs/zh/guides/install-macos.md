@@ -55,9 +55,9 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.david.feishu-bot.pli
 brew install python@3.11 go node uv
 
 # === 2. 装飞书相关 ===
-mkdir -p ~/.local/bin ~/.local/share/feishu-cli/venv
-~/.hermes/bin/uv venv --python 3.11 ~/.local/share/feishu-cli/venv
-~/.hermes/bin/uv pip install --python ~/.local/share/feishu-cli/venv/bin/python3 \
+mkdir -p ~/.local/bin ~/.venvs/feishu-cli
+~/.hermes/bin/uv venv --python 3.11 ~/.venvs/feishu-cli
+~/.hermes/bin/uv pip install --python ~/.venvs/feishu-cli/bin/python3 \
   lark-oapi websockets cryptography requests aiohttp
 
 # === 3. 装 via54Larkbotgo (Go skeleton) ===

@@ -25,8 +25,8 @@ sudo apt install python3.11 python3-pip
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 装飞书 deps
-~/.cargo/bin/uv venv --python 3.11 ~/.local/share/feishu-cli/venv
-~/.cargo/bin/uv pip install --python ~/.local/share/feishu-cli/venv/bin/python3 \
+~/.cargo/bin/uv venv --python 3.11 ~/.venvs/feishu-cli
+~/.cargo/bin/uv pip install --python ~/.venvs/feishu-cli/bin/python3 \
   lark-oapi websockets cryptography requests
 
 # 装 via54Larkbotgo

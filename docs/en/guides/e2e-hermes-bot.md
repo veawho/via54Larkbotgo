@@ -10,7 +10,7 @@
 # 1. Already installed per ../guides/install-macos.md
 # 2. inbox_watcher.py at ~/.hermes/scripts/
 # 3. Feishu app credentials at ~/.config/feishu/credentials.json
-# 4. Python venv at ~/.local/share/feishu-cli/venv/ (lark-oapi + click + websockets)
+# 4. Python venv at ~/.venvs/feishu-cli/ (lark-oapi + click + websockets)
 ```
 
 ## Step 1: start inbox_watcher (foreground)

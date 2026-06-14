@@ -60,7 +60,7 @@ chmod 600 ~/.config/feishu/credentials.json
 ### Install Python dependencies
 
 ```bash
-~/.hermes/bin/uv pip install --python ~/.local/share/feishu-cli/venv/bin/python3 \
+~/.hermes/bin/uv pip install --python ~/.venvs/feishu-cli/bin/python3 \
   lark-oapi websockets cryptography requests
 ```
 

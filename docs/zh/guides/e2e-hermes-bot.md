@@ -9,7 +9,7 @@
 # 1. 已按 ../guides/install-macos.md 装好
 # 2. inbox_watcher.py 在 ~/.hermes/scripts/
 # 3. 飞书 app 凭据在 ~/.config/feishu/credentials.json
-# 4. Python venv 在 ~/.local/share/feishu-cli/venv/ (lark-oapi + click + websockets)
+# 4. Python venv 在 ~/.venvs/feishu-cli/ (lark-oapi + click + websockets)
 ```
 
 ## 步骤 1: 启 inbox_watcher (前台)

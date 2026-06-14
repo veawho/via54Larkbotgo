@@ -7,7 +7,7 @@ bot/feishu_bot_daemon.py — 飞书 WebSocket bot daemon (extracted from feishu 
       inbox_watcher + feishu-bot 端到端跑通, 把 bot 子命令从
       /Users/david/.local/bin/feishu 抽出独立维护.
 
-依赖: lark-oapi 1.6.8, Python 3.9+ venv at ~/.local/share/feishu-cli/venv
+依赖: lark-oapi 1.6.8, Python 3.9+ venv at ~/.venvs/feishu-cli
 环境: ALLOWED_CHATS=oc_xxx,oc_xxx (白名单群, 逗号分隔)
       FEISHU_BOT_APP_ID=cli_xxx (robot app_id, 默认 <APP_ID>)
 启动: feishu bot start (前台, 用于 launchd)

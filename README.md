@@ -71,7 +71,7 @@ md5 -q via54Larkfix/common/bot/feishu_bot_daemon.py \
 跟 Python daemon 共用 launchd plist 路径 (`~/Library/LaunchAgents/com.david.feishu-bot.plist`),但需要:
 1. 重写 plist 的 `ProgramArguments` 从 `~/.local/bin/feishu` 改成 `~/Desktop/developments/via54Larkbotgo/bin/via54Larkbotgo`
 2. 同样的 `EnvironmentVariables` (FEISHU_BOT_APP_ID, ALLOWED_CHATS)
-3. venv 依赖变成 go binary 自包含,不需要 `~/.local/share/feishu-cli/venv/`
+3. venv 依赖变成 go binary 自包含,不需要 `~/.venvs/feishu-cli/`
 
 ## 关联项目
 

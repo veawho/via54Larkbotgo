@@ -24,8 +24,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 
 # === 2. 飞书 deps ===
-~/.local/bin/uv venv --python 3.11 ~/.local/share/feishu-cli/venv
-~/.local/bin/uv pip install --python ~/.local/share/feishu-cli/venv/bin/python3 \
+~/.local/bin/uv venv --python 3.11 ~/.venvs/feishu-cli
+~/.local/bin/uv pip install --python ~/.venvs/feishu-cli/bin/python3 \
   lark-oapi websockets cryptography requests
 
 # === 3. via54Larkbotgo ===
