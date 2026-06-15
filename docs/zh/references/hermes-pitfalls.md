@@ -157,7 +157,86 @@ hermes gateway restart
 
 ---
 
+---
+
+## 坑 6: PyYAML `C:/Users/...` 触发 `\U` Unicode escape
+
+**症状**: `Failed to parse config.yaml: expected escape sequence of 8 hexadecimal numbers`。
+
+**修法**: YAML 字符串里用**双反斜杠** (e.g. `C:\\Users\\...`) 或用 `raw` Python 字符串。
+
+> Source: [incidents/2026-06/02-yaml-parse-failure.md](https://github.com/veawho/via54Hermes/blob/main/incidents/2026-06/02-yaml-parse-failure.md)
+
+---
+
+## 坑 7: `hermes gateway status` stale 5-30s
+
+**症状**: `hermes gateway status` 说"running", 实际 gateway 已经死。
+
+**修法**: 用**真实验证**:
+```bash
+ps aux | grep "hermes_cli.main gateway" | grep -v grep
+lsof -nP -iTCP:18791 -sTCP:LISTEN
+tail -5 ~/.hermes/logs/gateway.log
+curl -s http://127.0.0.1:8642/health/detailed
+```
+
+> Source: [references/api-server-routes.md](https://github.com/veawho/via54Hermes/blob/main/references/api-server-routes.md)
+
+---
+
+## 坑 8: `X-Hermes-Api-Key` header 不工作
+
+**症状**: 调 `/api/sessions` 返 401, 改用 `X-Hermes-Api-Key: <key>` 没用。
+
+**修法**: 用 `Authorization: Bearer *** (从 `~/.hermes/.env` 拿)。
+
+> Source: [references/api-server-routes.md](https://github.com/veawho/via54Hermes/blob/main/references/api-server-routes.md)
+
+---
+
+## 坑 9: 飞书 Lark approval skill 损坏
+
+**症状**: Larkfix daemon 启 exit code 1, `Lark approval failed: 401 unauthorized`。
+
+**修法**:
+1. 备份还原: `cp ~/.config/feishu/credentials.json.bak ~/.config/feishu/credentials.json`
+2. 重启 daemon
+3. 验 WS: `lsof -nP -p <PID> | grep msg-frontier` 看到 `ESTABLISHED`
+
+> Source: [incidents/2026-05/15-lark-approval-skill-corrupt.md](https://github.com/veawho/via54Hermes/blob/main/incidents/2026-05/15-lark-approval-skill-corrupt.md)
+
+---
+
+## 坑 10: `state.db` 跟 `memory_log.db` 不共享
+
+**症状**: `session_search` 找到 session, 但 Desktop sidebar 看不到。
+
+**修法**:
+- 用 `session_search` 找老 session (memory_log.db 维护)
+- 用 Desktop sidebar 看新 session (state.db 维护)
+- **两个 DB 不互相迁移**, 老 session 永远在 memory_log.db
+
+> Source: [docs/04-state-db/two-session-dbs.md](https://github.com/veawho/via54Hermes/blob/main/docs/04-state-db/two-session-dbs.md)
+
+---
+
+## 坑 11: `via54-mcp` 启动失败 `template-registry.yaml` 缺失
+
+**症状**: `MCP 初始化失败: engine init: register not found: open /Users/david/template-registry.yaml: no such file or directory`。
+
+**修法**:
+```bash
+cp /Users/david/Desktop/developments/via54Design/templates/registry.yaml \
+   /Users/david/template-registry.yaml
+```
+
+> Source: 本机 2026-06-15 体检发现
+
+---
+
 ## 5 架构 SVG (per via54Hermes)
+
 
 via54Hermes 提供了 5 个**dark-themed SVG** 架构图 (无外部依赖):
 
