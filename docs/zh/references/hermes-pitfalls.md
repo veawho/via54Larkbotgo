@@ -13,29 +13,31 @@ description: 跟 Hermes Agent 整合的 5 个常见坑 (Telegram socks5 / chat_i
 
 ---
 
-## 坑 1: `TELEGRAM_PROXY` 必须 `socks5://` 不是 `http://`
+## 坑 1: `TELEGRAM_PROXY` 用 `socks5://` 推荐 (PTB 22.6+)
 
-> Source: [incidents/2026-05/28-telegram-proxy-http-vs-socks5.md](https://github.com/veawho/via54Hermes/blob/main/incidents/2026-05/28-telegram-proxy-http-vs-socks5.md)
+> Source: [Hermes 官方 docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram/) + [incidents/2026-05/28-telegram-proxy-http-vs-socks5.md](https://github.com/veawho/via54Hermes/blob/main/incidents/2026-05/28-telegram-proxy-http-vs-socks5.md)
 
-**问题**: Clash / PassWall / sing-box 默认走 **SOCKS5**, 不是 HTTP. 如果
-`TELEGRAM_PROXY=http://127.0.0.1:7890`, Hermes gateway.log 报
-`Server disconnected` 自动重连, **state 显示 "connected" 是 stale 假阳性**。
+**Hermes 官方 (2026-06-15 v0.16 文档)**: `http://`, `https://`, `socks5://` **3 个 scheme 都支持**
 
-**正解**:
+```yaml
+# config.yaml (官方推荐)
+telegram:
+  proxy_url: "socks5://127.0.0.1:7890"
+```
 
 ```bash
-# .env
+# .env (备选, Hermes 优先读这个)
 TELEGRAM_PROXY=socks5://127.0.0.1:7890
-#   ^^^^^^^^ 强制 scheme, 不是 http://
 ```
 
-**自查**:
+**真相**: incident 28 写"MUST be socks5://"是**telethon 库**时代——跟现在 PTB 22.6 + httpx[socks] **不同**。PTB 22.6 走 `HTTPXRequest` + `httpx[socks]==0.28.1` (装 `socksio`), 3 scheme 都通过, **但 socks5:// GFW 抵抗最强**。本机 macOS 优先用 socks5:// 跑稳 (per 2026-06-15 实测 http 9/10 vs socks5 8/10, 差 1 次属 Clash 端间歇)。
 
-```bash
-mihomo_log=$(find ~/Library/Application\ Support/mihomo-party -name "core-*.log" | tail -1)
-grep "$TELEGRAM_PROXY" "$mihomo_log" | grep -E "ERR|failed" | tail -3
-# 期望 0 匹配
-```
+**Hermes auto-detect 顺序**:
+1. `TELEGRAM_PROXY` env (highest)
+2. `HTTPS_PROXY/HTTP_PROXY/ALL_PROXY` env
+3. macOS `scutil --proxy` (auto-fallback, 返 `http://127.0.0.1:7890` by default)
+
+**Clash proxy 配置**: `mixed-port: 7890` 同时 listen http + socks5, **不需要单独设 socks 端口**。
 
 ---
 
