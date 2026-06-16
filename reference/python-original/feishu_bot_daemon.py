@@ -7,7 +7,7 @@ bot/feishu_bot_daemon.py — 飞书 WebSocket bot daemon (extracted from feishu 
       inbox_watcher + feishu-bot 端到端跑通, 把 bot 子命令从
       /Users/david/.local/bin/feishu 抽出独立维护.
 
-依赖: lark-oapi 1.6.8, Python 3.9+ venv at ~/.venvs/feishu-cli
+依赖: lark-oapi 1.6.8, Python 3.9+ venv at ~/.local/share/feishu-cli/venv
 环境: ALLOWED_CHATS=oc_xxx,oc_xxx (白名单群, 逗号分隔)
       FEISHU_BOT_APP_ID=cli_xxx (robot app_id, 默认 <APP_ID>)
 启动: feishu bot start (前台, 用于 launchd)
@@ -42,7 +42,7 @@ def bot_start(foreground):
     # inline bot脚本 (写到 tmp, venv python跑)
     bot_code = f'''
 import os, sys, json, time, re, threading, shutil, glob, subprocess, warnings
-sys.path.insert(0, "/Users/david/.venvs/feishu-cli/lib/python3.9/site-packages")
+sys.path.insert(0, "/Users/david/.hermes/hermes-agent/venv/lib/python3.9/site-packages")
 import lark_oapi as lark
 from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
 import urllib.request, ssl
@@ -69,6 +69,18 @@ def get_token():
     raise RuntimeError(f"auth fail: {{body}}")
 
 def reply(chat_id, text):
+    # 2026-06-15: 加 _send_path_degraded 修法 (per Hermes PR #31441 c0441cb)
+    # 概念: send 路径异常后短路返 retryable, 让 caller 走 fallback 路径
+    # Hermes 适用: PTB Telegram httpx pool 状态; Larkfix 适用: urllib 重试
+    # 状态: module-level 标志 (per Hermes 设计 — 'self' attr 避免 init 复杂)
+    if globals().get('_send_path_degraded', False):
+        log(f"reply short-circuit (send_path_degraded) chat_id={chat_id}")
+        return  # 静默返, caller 看 .error/.retry 路径 (per inbox_watcher 设计)
+
+    # 1. Increment 失败计数
+    globals().setdefault('_send_path_failure_count', 0)
+    globals().setdefault('_send_path_success_streak', 0)
+
     try:
         tok = get_token()
         # 自动识别 ID 类型: oc_=chat_id, ou_=open_id, on_=user_id
@@ -95,10 +107,31 @@ def reply(chat_id, text):
             body = json.loads(resp.read().decode())
         if body.get("code") == 0:
             log(f"reply sent msg_id={{body['data']['message_id']}} id_type={{id_type}}")
+            # 2. 成功 → reset 失败计数 + 增加 success streak
+            globals()['_send_path_failure_count'] = 0
+            globals()['_send_path_success_streak'] = globals().get('_send_path_success_streak', 0) + 1
+            # 3. 2+ 连续成功 → clear degraded
+            if globals()['_send_path_success_streak'] >= 2:
+                if globals().get('_send_path_degraded', False):
+                    log("send_path RECOVERED (2+ consecutive OK)")
+                globals()['_send_path_degraded'] = False
         else:
             log(f"reply FAIL {{body.get('code')}} {{body.get('msg')}}")
+            globals()['_send_path_success_streak'] = 0
+            globals()['_send_path_failure_count'] = globals().get('_send_path_failure_count', 0) + 1
+            # 4. 3+ 连续失败 → set degraded
+            if globals()['_send_path_failure_count'] >= 3:
+                if not globals().get('_send_path_degraded', False):
+                    log("send_path DEGRADED (3+ consecutive fail) — short-circuit until recover")
+                globals()['_send_path_degraded'] = True
     except Exception as e:
         log(f"reply EXC: {{type(e).__name__}}: {{e}}")
+        globals()['_send_path_success_streak'] = 0
+        globals()['_send_path_failure_count'] = globals().get('_send_path_failure_count', 0) + 1
+        if globals()['_send_path_failure_count'] >= 3:
+            if not globals().get('_send_path_degraded', False):
+                log("send_path DEGRADED (3+ consecutive EXC) — short-circuit until recover")
+            globals()['_send_path_degraded'] = True
 
 def _write_inbox(msg_id, chat_id, sender_open_id, sender_name, text):
     # (inline copy) 写 /tmp/hermes_inbox/<msg_id>.json, 给 hermes agent 消费.
