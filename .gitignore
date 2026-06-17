@@ -1,24 +1,63 @@
-# Build artifacts
-bin/
-
-# macOS
+# macOS metadata
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# Editor
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Go
+# Editors (jetbrains etc)
+*~
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Python venv
+venv/
+.venv/
+env/
+.env.local
+.env.*.local
+
+# Output / reports (regenerable)
+reports/
+output.html
+*.log
+
+# Cached media (re-fetchable, see _scripts/{stock,subtitles}/*.mp4)
+_scripts/stock/
+_scripts/subtitles/
+*.mp4
+*.mp3
+*.wav
+
+# One-off artifacts
+DEPLOY_REPORT_*.md
+
+# Sensitive (lark-cli creds are root-only, never to be committed)
+*.enc
+master.key.file
+credentials.json
+secrets.yaml
+
+# Build artifacts
+bin/
 *.test
 *.out
-
-# Node (VitePress SSG) — do NOT commit, GitHub Actions will npm install
-node_modules/
-
-# VitePress build (do NOT commit — same pattern as via54Skills)
-docs/.vitepress/dist/
-docs/.vitepress/cache/
-/bin/bash: line 4: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-snap-d3c394fd5e1f.sh: No such file or directory
-/bin/bash: line 5: /private/tmp/PKInstallSandbox.Akd9Dw/tmp/hermes-cwd-d3c394fd5e1f.txt: No such file or directory
+*.exe
+backups/
