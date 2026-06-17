@@ -1,0 +1,332 @@
+<h1 id="feishu-inbox-protocol" tabindex="-1">Feishu Inbox Protocol <a class="header-anchor" href="#feishu-inbox-protocol" aria-label="Permalink to &quot;Feishu Inbox Protocol&quot;"></a></h1>
+<blockquote>
+<p><strong>This document is the authoritative reference for the file-IPC protocol
+between a Feishu bot daemon (WebSocket long-connection OR Webhook) and
+the AI Agent's inbox_watcher.</strong></p>
+</blockquote>
+<p>The Go skeleton in this repo (<code>main.go</code>) and the Python daemon
+(<code>via54Larkfix/reference/python-original/feishu_bot_daemon.py</code>) both
+honor this schema. If you change one side without the other, replies
+will silently break.</p>
+<blockquote>
+<p>📄 <strong>This is a direct port of <code>via54Larkfix/references/feishu_inbox_protocol.md</code>
+(22 KB)</strong>, kept here for self-containment of the bot docs site.</p>
+</blockquote>
+<h2 id="_1-directory-layout" tabindex="-1">1. Directory layout <a class="header-anchor" href="#_1-directory-layout" aria-label="Permalink to &quot;1. Directory layout&quot;"></a></h2>
+<p>All paths absolute. Both daemons MUST agree on these.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>directory</th>
+<th>written by</th>
+<th>read by</th>
+<th>purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/tmp/hermes_inbox/</code></td>
+<td>bot daemon</td>
+<td>inbox_watcher</td>
+<td>fresh inbound messages, awaiting LLM call</td>
+</tr>
+<tr>
+<td><code>/tmp/hermes_inbox/.processing/</code></td>
+<td>inbox_watcher</td>
+<td>inbox_watcher</td>
+<td>per-msg lock; only the watcher moves files</td>
+</tr>
+<tr>
+<td><code>/tmp/hermes_inbox/.done/</code></td>
+<td>inbox_watcher</td>
+<td>nobody (terminal)</td>
+<td>successful LLM replies; never re-consumed</td>
+</tr>
+<tr>
+<td><code>/tmp/hermes_inbox/.error/</code></td>
+<td>inbox_watcher</td>
+<td>inbox_watcher</td>
+<td>failures; eligible for retry after 60s</td>
+</tr>
+<tr>
+<td><code>/tmp/hermes_outbox/</code></td>
+<td>inbox_watcher</td>
+<td>bot daemon</td>
+<td>LLM replies awaiting Feishu POST</td>
+</tr>
+<tr>
+<td><code>/tmp/inbox_watcher.pid</code></td>
+<td>inbox_watcher</td>
+<td>humans + tools</td>
+<td>watcher pid for status / kill</td>
+</tr>
+<tr>
+<td><code>~/.hermes/logs/inbox-watcher.out.log</code></td>
+<td>inbox_watcher</td>
+<td>humans</td>
+<td>one line per cycle, including text[:80]</td>
+</tr>
+<tr>
+<td><code>~/.hermes/logs/feishu_bot_daemon.out.log</code></td>
+<td>bot daemon</td>
+<td>humans</td>
+<td>ws activity + outbox POSTs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Atomicity invariant</strong>: the bot daemon writes a fresh inbox file with
+<strong>write-then-rename</strong> (<code>os.replace</code> on Python, <code>os.WriteFile</code> + <code>os.Rename</code>
+on Go) so a concurrent watcher never reads a half-written file. The watcher
+then <code>os.rename</code>s the same file into <code>.processing/</code>; this rename is also
+atomic on the same filesystem (<code>/tmp</code> is one FS on macOS). The
+<code>.processing/</code> rename is the <strong>lock</strong>: two concurrent watchers race on
+it, one wins, the other gets <code>FileNotFoundError</code> and moves on (safe,
+idempotent).</p>
+<h2 id="_2-inbox-json-schema-bot-daemon-→-watcher" tabindex="-1">2. Inbox JSON schema (bot daemon → watcher) <a class="header-anchor" href="#_2-inbox-json-schema-bot-daemon-→-watcher" aria-label="Permalink to &quot;2. Inbox JSON schema (bot daemon → watcher)&quot;"></a></h2>
+<p>Path: <code>/tmp/hermes_inbox/&lt;msg_id&gt;.json</code></p>
+<div class="language-json vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">json</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "msg_id"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:      </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"om_xxxxxxxxxxxxxxxxxxxxxxxx"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "chat_id"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:     </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"oc_xxxxxxxxxxxxxxxxxxxxxxxx"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "text"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:        </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"用户发的文字 (already stripped)"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "sender"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:      </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"ou_xxxxxxxxxxxxxxxxxxxxxxxx"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "received_at"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1717920000.123</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+</div><h3 id="per-field-reference" tabindex="-1">Per-field reference <a class="header-anchor" href="#per-field-reference" aria-label="Permalink to &quot;Per-field reference&quot;"></a></h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>required</th>
+<th>source</th>
+<th>example</th>
+<th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>msg_id</code></td>
+<td>string</td>
+<td>yes</td>
+<td>Feishu event <code>message_id</code></td>
+<td><code>&quot;om_a1b2c3d4...&quot;</code> (om_ prefix)</td>
+<td>filename stem in every state dir; must be unique per inbound message</td>
+</tr>
+<tr>
+<td><code>chat_id</code></td>
+<td>string</td>
+<td>yes</td>
+<td>Feishu event <code>chat_id</code></td>
+<td><code>&quot;oc_a1b2c3d4...&quot;</code> (oc_ prefix)</td>
+<td>reply target. If starts with <code>oc_test_</code>, bot daemon's outbox watcher skips Feishu POST</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>string</td>
+<td>yes</td>
+<td>Feishu event message</td>
+<td><code>&quot;今天天气怎么样&quot;</code></td>
+<td>Non-empty after <code>.strip()</code> required for LLM call. Empty text → reply=&quot;[empty input]&quot;, <code>ok=false</code></td>
+</tr>
+<tr>
+<td><code>sender</code></td>
+<td>string</td>
+<td>no</td>
+<td>Feishu event <code>sender.sender_id.open_id</code></td>
+<td><code>&quot;ou_a1b2c3d4...&quot;</code> (ou_ prefix)</td>
+<td>informational. Watcher does not route on it</td>
+</tr>
+<tr>
+<td><code>received_at</code></td>
+<td>float</td>
+<td>no</td>
+<td><code>time.time()</code> at write</td>
+<td><code>1717920000.123</code></td>
+<td>Unix seconds, sub-millisecond. Diagnostics only; not for ordering (filesystem mtime is sort key)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3-outbox-json-schema-watcher-→-bot-daemon" tabindex="-1">3. Outbox JSON schema (watcher → bot daemon) <a class="header-anchor" href="#_3-outbox-json-schema-watcher-→-bot-daemon" aria-label="Permalink to &quot;3. Outbox JSON schema (watcher → bot daemon)&quot;"></a></h2>
+<p>Path: <code>/tmp/hermes_outbox/&lt;msg_id&gt;.json</code>. <strong>Always written</strong>, even on
+LLM failure (so bot daemon can send a system error message).</p>
+<div class="language-json vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">json</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "msg_id"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:     </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"om_xxxxxxxxxxxxxxxxxxxxxxxx"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "chat_id"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:    </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"oc_xxxxxxxxxxxxxxxxxxxxxxxx"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "ok"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:         </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">true</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "reply"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:      </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"今天上海多云转晴..."</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "model"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:      </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"minimax-cn/MiniMax-M3"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">  "duration_sec"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">5.12</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+</div><h3 id="per-field-reference-1" tabindex="-1">Per-field reference <a class="header-anchor" href="#per-field-reference-1" aria-label="Permalink to &quot;Per-field reference&quot;"></a></h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>field</th>
+<th>type</th>
+<th>source</th>
+<th>purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>msg_id</code></td>
+<td>string</td>
+<td>echo of inbox.msg_id</td>
+<td>Bot daemon uses to correlate reply with inbound queue. Filename stem of outbox file</td>
+</tr>
+<tr>
+<td><code>chat_id</code></td>
+<td>string</td>
+<td>echo of inbox.chat_id</td>
+<td>Bot daemon uses as <code>receive_id</code> for <code>im/v1/messages</code> POST. Skipped if <code>oc_test_</code> prefix</td>
+</tr>
+<tr>
+<td><code>ok</code></td>
+<td>bool</td>
+<td><code>rc==0 AND non-empty stdout</code></td>
+<td><code>false</code> → inbox file staged in <code>.error/&lt;msg_id&gt;.retry&lt;N&gt;.json</code> for 60s backoff retry, max 3 attempts</td>
+</tr>
+<tr>
+<td><code>reply</code></td>
+<td>string</td>
+<td>LLM reply text</td>
+<td>sent back to Feishu</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>e.g. <code>&quot;minimax-cn/MiniMax-M3&quot;</code></td>
+<td>diagnostics</td>
+</tr>
+<tr>
+<td><code>duration_sec</code></td>
+<td>float</td>
+<td>LLM call wall time</td>
+<td>diagnostics</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4-state-machine-paths" tabindex="-1">4. State machine (paths) <a class="header-anchor" href="#_4-state-machine-paths" aria-label="Permalink to &quot;4. State machine (paths)&quot;"></a></h2>
+<div class="language- vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>/tmp/hermes_inbox/&#x3C;msg_id>.json     ← bot daemon writes (write-then-rename)</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       │  inbox_watcher does `os.rename` (atomic on /tmp)</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>/tmp/hermes_inbox/.processing/&#x3C;msg_id>.json     ← per-msg lock</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ├─ ok=true    → /tmp/hermes_inbox/.done/&#x3C;msg_id>.json    (terminal)</span></span>
+<span class="line"><span>       ├─ ok=false   → /tmp/hermes_inbox/.error/&#x3C;msg_id>.retry&#x3C;N>.json</span></span>
+<span class="line"><span>       │                (N++ each retry, after 60s backoff, max 3)</span></span>
+<span class="line"><span>       │                on success → .done; on exhausted → .error</span></span>
+<span class="line"><span>       └─ bad JSON   → /tmp/hermes_inbox/.error/&#x3C;msg_id>.badjson  (no retry)</span></span></code></pre>
+</div><p>Bot daemon's outbox watcher polls <code>/tmp/hermes_outbox/*.json</code> and POSTs
+each to Feishu. Successful POSTs move to <code>/tmp/hermes_outbox/.done/</code>.
+Failed POSTs (network / API error) retry with backoff; permanent
+failures (404 chat deleted) go to <code>/tmp/hermes_outbox/.error/</code>.</p>
+<h2 id="_5-retry-semantics" tabindex="-1">5. Retry semantics <a class="header-anchor" href="#_5-retry-semantics" aria-label="Permalink to &quot;5. Retry semantics&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Failure</th>
+<th>Where</th>
+<th>Backoff</th>
+<th>Max attempts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM <code>rc!=0</code> or empty stdout</td>
+<td>inbox_watcher</td>
+<td>60 s</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Bad JSON parse</td>
+<td>inbox_watcher</td>
+<td>none (immediate <code>.error/badjson</code>)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Feishu POST 4xx (bad request)</td>
+<td>bot daemon</td>
+<td>none (skip retry)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Feishu POST 5xx (server error)</td>
+<td>bot daemon</td>
+<td>60 s</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Feishu POST 404 chat not found</td>
+<td>bot daemon</td>
+<td>none (skip)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>After max attempts, the file lands in <code>.error/&lt;msg_id&gt;.retry&lt;N&gt;.json</code>
+<strong>without being moved further</strong>. Operators manually inspect <code>.error/</code>
+periodically to diagnose root causes.</p>
+<h2 id="_6-the-oc-test-escape-hatch" tabindex="-1">6. The <code>oc_test_</code> escape hatch <a class="header-anchor" href="#_6-the-oc-test-escape-hatch" aria-label="Permalink to &quot;6. The `oc_test_` escape hatch&quot;"></a></h2>
+<p>If <code>chat_id</code> starts with <code>oc_test_</code>, the bot daemon <strong>skips the Feishu
+POST entirely</strong> and just logs the would-be reply. This lets developers
+test the full pipeline without spamming real users.</p>
+<h2 id="_7-cross-os-atomicity" tabindex="-1">7. Cross-OS atomicity <a class="header-anchor" href="#_7-cross-os-atomicity" aria-label="Permalink to &quot;7. Cross-OS atomicity&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>OS</th>
+<th><code>/tmp</code> filesystem</th>
+<th>atomic rename works?</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td>APFS</td>
+<td>yes</td>
+<td><code>/tmp</code> is same FS as <code>/tmp/hermes_inbox/</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td>tmpfs or ext4</td>
+<td>yes</td>
+<td>same FS</td>
+</tr>
+<tr>
+<td>Windows / WSL2</td>
+<td>WSL2's <code>/tmp</code> is <code>tmpfs</code>, distinct from Windows' <code>%TEMP%</code> (NTFS)</td>
+<td><strong>NO</strong> if cross-FS</td>
+<td>keep both daemons in same FS</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule</strong>: bot daemon and inbox_watcher MUST be on the same machine
+and same filesystem.</p>
+<h2 id="_8-operational-runbook" tabindex="-1">8. Operational runbook <a class="header-anchor" href="#_8-operational-runbook" aria-label="Permalink to &quot;8. Operational runbook&quot;"></a></h2>
+<h3 id="inbox-keeps-growing-watcher-not-consuming" tabindex="-1">&quot;inbox keeps growing&quot; (watcher not consuming) <a class="header-anchor" href="#inbox-keeps-growing-watcher-not-consuming" aria-label="Permalink to &quot;&quot;inbox keeps growing&quot; (watcher not consuming)&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ls</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /tmp/hermes_inbox/</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">*</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">.json</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> 2></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/dev/null</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> wc</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -l</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">pgrep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -fl</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> inbox_watcher</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cat</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /tmp/inbox_watcher.pid</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ps</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> $(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cat</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /tmp/inbox_watcher.pid</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">-o</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> pid,stat,etime</span></span></code></pre>
+</div><p>Common causes: LLM API rate-limited (429), Hermes CLI binary missing,
+LLM API key expired.</p>
+<h3 id="outbox-keeps-growing-bot-daemon-not-posting" tabindex="-1">&quot;outbox keeps growing&quot; (bot daemon not POSTing) <a class="header-anchor" href="#outbox-keeps-growing-bot-daemon-not-posting" aria-label="Permalink to &quot;&quot;outbox keeps growing&quot; (bot daemon not POSTing)&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ls</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /tmp/hermes_outbox/</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">*</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">.json</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> 2></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/dev/null</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> wc</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -l</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">pgrep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -fl</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">lsof</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -nP</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> $(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">pgrep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -f</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> msg-frontier</span></span></code></pre>
+</div><p>Common causes: Feishu revoked ws capability, App ID/Secret rotated,
+network change.</p>
+<h2 id="_9-cross-implementation-conformance" tabindex="-1">9. Cross-implementation conformance <a class="header-anchor" href="#_9-cross-implementation-conformance" aria-label="Permalink to &quot;9. Cross-implementation conformance&quot;"></a></h2>
+<p>Both implementations honor this protocol:</p>
+<ul>
+<li><strong>Python</strong>: <code>via54Larkfix/reference/python-original/feishu_bot_daemon.py</code> (419 lines, v20.7) + <code>inbox_watcher.py</code> (570 lines)</li>
+<li><strong>Go</strong>: <code>via54Larkbotgo/main.go</code> (this repo, skeleton)</li>
+</ul>
+<h2 id="_10-references" tabindex="-1">10. References <a class="header-anchor" href="#_10-references" aria-label="Permalink to &quot;10. References&quot;"></a></h2>
+<ul>
+<li><code>reference/protocol/inbox_schema.md</code> — quick-reference of all fields</li>
+<li><code>reference/python-original/feishu_bot_daemon.py</code> — Python implementation</li>
+</ul>

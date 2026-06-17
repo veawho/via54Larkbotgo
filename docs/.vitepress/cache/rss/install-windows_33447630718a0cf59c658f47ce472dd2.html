@@ -1,0 +1,129 @@
+<h1 id="windows-安装指南" tabindex="-1">Windows 安装指南 <a class="header-anchor" href="#windows-安装指南" aria-label="Permalink to &quot;Windows 安装指南&quot;"></a></h1>
+<blockquote>
+<p>Windows 10/11 + WSL2 + Hermes Agent 实测可行(2026-06-14)。
+原生 Windows (无 WSL) 走 NSSM + Task Scheduler, 本节给 stub, 实测待补。</p>
+</blockquote>
+<h2 id="前置要求" tabindex="-1">前置要求 <a class="header-anchor" href="#前置要求" aria-label="Permalink to &quot;前置要求&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>组件</th>
+<th>版本</th>
+<th>检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td>10 1909+ / 11 (推荐 WSL2)</td>
+<td><code>ver</code></td>
+</tr>
+<tr>
+<td>WSL2</td>
+<td>Ubuntu 22.04 LTS (推荐)</td>
+<td><code>wsl --status</code></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.11+ (WSL 内)</td>
+<td><code>wsl python3 --version</code></td>
+</tr>
+<tr>
+<td>Go</td>
+<td>1.20+ (WSL 内)</td>
+<td><code>wsl go version</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="wsl2-推荐路径-90-用户" tabindex="-1">WSL2 推荐路径 (90% 用户) <a class="header-anchor" href="#wsl2-推荐路径-90-用户" aria-label="Permalink to &quot;WSL2 推荐路径 (90% 用户)&quot;"></a></h2>
+<p>WSL2 Ubuntu 内 跟 macOS 安装<strong>几乎一致</strong>:</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># WSL 内</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> apt</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> update</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> apt</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> python3.11</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> python3-pip</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 装 uv (Hermes 风格 venv 管理)</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">curl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -LsSf</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> https://astral.sh/uv/install.sh</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> sh</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 装飞书 deps</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.cargo/bin/uv venv --python 3.11 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.venvs/feishu-cli</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.cargo/bin/uv pip install --python </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.venvs/feishu-cli/bin/python3 </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">\</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  lark-oapi</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> websockets</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> cryptography</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> requests</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 装 via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">cd</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /mnt/c/Users/</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">yo</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">u</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/Desktop/developments</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">  # 或 ~/developments</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">git</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> clone</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> https://github.com/veawho/via54Larkbotgo.git</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">cd</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">go</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> build</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -o</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> bin/via54Larkbotgo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ./</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ln</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -sf</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> $PWD</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/bin/via54Larkbotgo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.local/bin/via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> +x</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.local/bin/via54Larkbotgo</span></span></code></pre>
+</div><h2 id="原生-windows-路径-无-wsl" tabindex="-1">原生 Windows 路径 (无 WSL) <a class="header-anchor" href="#原生-windows-路径-无-wsl" aria-label="Permalink to &quot;原生 Windows 路径 (无 WSL)&quot;"></a></h2>
+<p>⚠️ <strong>stub</strong>: 本仓库未实测原生 Windows, 下面是基于 Task Scheduler + NSSM
+标准做法的模板。</p>
+<div class="language-powershell vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">powershell</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 1. 装 Python 3.11 (Python.org installer, 勾 "Add to PATH")</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 2. 装 uv</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">irm https:</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">//</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">astral.sh</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">uv</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">install.ps1 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> iex</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 3. 装飞书 deps</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">uv venv </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">--</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">python </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">3.11</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> C:\Users\</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">you</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">\.local\share\feishu</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">cli\venv</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">uv pip install </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">--</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">python C:\Users\</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">you</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">\.local\share\feishu</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">cli\venv\Scripts\</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">python.exe</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> `</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  lark</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">oapi websockets cryptography requests</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 4. 装 via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">cd C:\Users\</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">you</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">\Desktop\developments</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">git clone https:</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">//</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">github.com</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">veawho</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">via54Larkbotgo.git</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">cd via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">go build </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">o bin\</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">via54Larkbotgo.exe</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> .\</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 加到 PATH 或者记绝对路径</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 5. 凭证</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">echo {</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"app_id"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"cli_xxx"</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">,</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "app_secret"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"yyy"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">} </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> Out-File</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> -</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">Encoding utf8 $</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">env:</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">USERPROFILE\.config\feishu\credentials.json</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">icacls $</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">env:</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">USERPROFILE\.config\feishu\credentials.json </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">inheritance:r </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">grant:r </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">env:</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">USERNAME</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">:(R)"</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 6. NSSM 注册服务 (用 NSSM, 不要用 Task Scheduler + python 启动, 复杂)</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 下载 https://nssm.cc/release/nssm-2.24.zip</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">nssm install FeishuBotDaemon C:\path\to\via54Larkbotgo\bin\</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">via54Larkbotgo.exe</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">nssm set FeishuBotDaemon AppParameters </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">--</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">app</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">id cli_xxx </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">--</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">app</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">secret yyy</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">nssm set FeishuBotDaemon AppStdout C:\path\to\logs\feishu</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">bot.out.log</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">nssm set FeishuBotDaemon AppStderr C:\path\to\logs\feishu</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">-</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">bot.err.log</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">nssm start FeishuBotDaemon</span></span></code></pre>
+</div><h2 id="验证-wsl2" tabindex="-1">验证 (WSL2) <a class="header-anchor" href="#验证-wsl2" aria-label="Permalink to &quot;验证 (WSL2)&quot;"></a></h2>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># binary</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.local/bin/via54Larkbotgo --help</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># ws 连接</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">lsof</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -nP</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> $(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">pgrep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -f</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">|</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> msg-frontier</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 飞书私聊测试</span></span></code></pre>
+</div><h2 id="已知问题" tabindex="-1">已知问题 <a class="header-anchor" href="#已知问题" aria-label="Permalink to &quot;已知问题&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>问题</th>
+<th>原因</th>
+<th>解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WSL2 装 <code>wslview</code> 后 Win 资源管理器打开, 但 feishu 推送路径不工作</td>
+<td>飞书 SDK 在 WSL2 内不能直接读 Windows 注册表</td>
+<td>用 WSL 内 fsnotify, 不要用 Windows event log</td>
+</tr>
+<tr>
+<td>NSSM + Go binary 在 Windows 11 偶尔崩溃 (exit code 3221225781)</td>
+<td>Go runtime 跟 Windows MinGW 不兼容</td>
+<td>改用 <code>start /B</code> + Task Scheduler 启 Python 包装层</td>
+</tr>
+<tr>
+<td>原生 Windows feishu-cli 没有官方 build</td>
+<td>lark-oapi 主要 Linux/macOS 优先</td>
+<td>用 WSL2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="相关" tabindex="-1">相关 <a class="header-anchor" href="#相关" aria-label="Permalink to &quot;相关&quot;"></a></h2>
+<ul>
+<li><a href="./install-macos">macOS 安装</a> (更详细)</li>
+<li><a href="./install-linux">Linux 安装</a></li>
+<li><a href="./connection-modes">连接方式对比</a></li>
+</ul>

@@ -1,0 +1,173 @@
+<h1 id="linux-install-guide" tabindex="-1">Linux install guide <a class="header-anchor" href="#linux-install-guide" aria-label="Permalink to &quot;Linux install guide&quot;"></a></h1>
+<blockquote>
+<p>Ubuntu 22.04 LTS + Hermes Agent is supported (planned, not run
+locally). Main difference from macOS: <strong>systemd</strong> instead of launchd.</p>
+</blockquote>
+<h2 id="prerequisites" tabindex="-1">Prerequisites <a class="header-anchor" href="#prerequisites" aria-label="Permalink to &quot;Prerequisites&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Component</th>
+<th>Version</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ubuntu</td>
+<td>22.04 LTS (recommended)</td>
+<td><code>lsb_release -a</code></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.11+</td>
+<td><code>python3 --version</code></td>
+</tr>
+<tr>
+<td>Go</td>
+<td>1.20+</td>
+<td><code>go version</code></td>
+</tr>
+<tr>
+<td>systemd</td>
+<td>250+ (default in Ubuntu 22.04)</td>
+<td><code>systemctl --version</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="full-install" tabindex="-1">Full install <a class="header-anchor" href="#full-install" aria-label="Permalink to &quot;Full install&quot;"></a></h2>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># === 1. System deps ===</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> apt</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> update</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> apt</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> python3.11</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> python3-pip</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Install uv</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">curl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -LsSf</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> https://astral.sh/uv/install.sh</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> sh</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">export</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> PATH</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$HOME</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/.local/bin:</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$PATH</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># === 2. Feishu deps ===</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.local/bin/uv venv --python 3.11 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.venvs/feishu-cli</span></span>
+<span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.local/bin/uv pip install --python </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.venvs/feishu-cli/bin/python3 </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">\</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  lark-oapi</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> websockets</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> cryptography</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> requests</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># === 3. via54Larkbotgo ===</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">cd</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/developments</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">git</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> clone</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> https://github.com/veawho/via54Larkbotgo.git</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">cd</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">go</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> build</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -o</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> bin/via54Larkbotgo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ./</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ln</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -sf</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> $PWD</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">/bin/via54Larkbotgo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.local/bin/via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> +x</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.local/bin/via54Larkbotgo</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># === 4. Credentials ===</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">mkdir</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/feishu</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cat</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> ></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/feishu/credentials.json</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> &#x3C;&#x3C;</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> 'EOF'</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">{"app_id": "cli_xxx", "app_secret": "yyy"}</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">EOF</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 600</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/feishu/credentials.json</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># === 5. systemd user service ===</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">mkdir</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/systemd/user/</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cat</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> ></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/systemd/user/feishu-bot.service</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> &#x3C;&#x3C;</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> 'EOF'</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">[Unit]</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">Description=Feishu/Lark WS bot daemon</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">After=network.target</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">[Service]</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">Type=simple</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">ExecStart=%h/.local/bin/via54Larkbotgo --app-id cli_xxx --app-secret yyy</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">Restart=on-failure</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">RestartSec=10</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">StandardOutput=append:%h/.hermes/logs/feishu-bot.out.log</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">StandardError=append:%h/.hermes/logs/feishu-bot.err.log</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">[Install]</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">WantedBy=default.target</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">EOF</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 6. Start + enable</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> --user</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> daemon-reload</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> --user</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> enable</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> feishu-bot.service</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> --user</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> start</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> feishu-bot.service</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> --user</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> status</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> feishu-bot.service</span></span></code></pre>
+</div><h2 id="verify" tabindex="-1">Verify <a class="header-anchor" href="#verify" aria-label="Permalink to &quot;Verify&quot;"></a></h2>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 1. Service status</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> --user</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> status</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> feishu-bot.service</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># → active (running) + main PID + "Started Feishu/Lark WS bot daemon"</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 2. WS connection</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ss</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -tnp</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> via54Larkbotgo</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># → ESTAB to msg-frontier.feishu.cn:443</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 3. Feishu test</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># DM the bot in Feishu, expect to receive LLM reply</span></span></code></pre>
+</div><h2 id="differences-from-macos" tabindex="-1">Differences from macOS <a class="header-anchor" href="#differences-from-macos" aria-label="Permalink to &quot;Differences from macOS&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Dimension</th>
+<th>macOS</th>
+<th>Linux</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service manager</td>
+<td>launchd (user agent)</td>
+<td>systemd (user instance)</td>
+</tr>
+<tr>
+<td>Restart trigger</td>
+<td>launchd throttle (5 I/O errors)</td>
+<td>systemd auto <code>Restart=on-failure</code></td>
+</tr>
+<tr>
+<td>Credentials path</td>
+<td><code>~/Library/Application Support/lark-cli/</code> (mac convention)</td>
+<td><code>~/.config/lark-cli/</code> (Linux convention)</td>
+</tr>
+<tr>
+<td>File monitoring</td>
+<td>fsevents (kqueue)</td>
+<td>inotify</td>
+</tr>
+<tr>
+<td>Webhook inbound</td>
+<td>needs port-forwarding tool (ngrok)</td>
+<td>direct port 443 listen + Nginx + Let's Encrypt</td>
+</tr>
+</tbody>
+</table>
+<h2 id="known-issues" tabindex="-1">Known issues <a class="header-anchor" href="#known-issues" aria-label="Permalink to &quot;Known issues&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Issue</th>
+<th>Cause</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>systemctl --user status</code> shows &quot;Failed to connect to bus&quot;</td>
+<td>missing <code>--user</code> flag</td>
+<td>add <code>--user</code> explicitly</td>
+</tr>
+<tr>
+<td>systemd user service doesn't auto-start at boot</td>
+<td><code>default.target</code> not in user instance startup scope</td>
+<td><code>loginctl enable-linger &lt;user&gt;</code> for user service persistence</td>
+</tr>
+<tr>
+<td>certbot auto-renewal of webhook cert doesn't work</td>
+<td>port 80 held by systemd-resolved</td>
+<td>use <code>--http-01-port 8080</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="related" tabindex="-1">Related <a class="header-anchor" href="#related" aria-label="Permalink to &quot;Related&quot;"></a></h2>
+<ul>
+<li><a href="./install-macos">macOS install</a></li>
+<li><a href="./install-windows">Windows install</a></li>
+<li><a href="./connection-modes">Connection modes</a></li>
+<li><a href="./ai-tools-hermes">Hermes integration</a></li>
+</ul>

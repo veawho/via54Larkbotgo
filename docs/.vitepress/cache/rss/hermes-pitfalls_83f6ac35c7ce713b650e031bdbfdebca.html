@@ -1,0 +1,175 @@
+<h1 id="hermes-整合-pitfalls" tabindex="-1">Hermes 整合 Pitfalls <a class="header-anchor" href="#hermes-整合-pitfalls" aria-label="Permalink to &quot;Hermes 整合 Pitfalls&quot;"></a></h1>
+<blockquote>
+<p><strong>来源</strong>: <a href="https://github.com/veawho/via54Hermes" target="_blank" rel="noreferrer">veawho/via54Hermes</a> 知识库
+(private) — Hermes Agent 自身运维 15+ 事故案例 + 5 架构 SVG
+<strong>整合日期</strong>: 2026-06-15
+<strong>跟本文关系</strong>: via54Larkbotgo 是 Go 飞书 bot skeleton, 跟 Hermes
+gateway 共享 Telegram / state.db / .env 字段, 以下 5 个坑直接相关</p>
+</blockquote>
+<hr>
+<h2 id="坑-1-telegram-proxy-必须-socks5-不是-http" tabindex="-1">坑 1: <code>TELEGRAM_PROXY</code> 必须 <code>socks5://</code> 不是 <code>http://</code> <a class="header-anchor" href="#坑-1-telegram-proxy-必须-socks5-不是-http" aria-label="Permalink to &quot;坑 1: `TELEGRAM_PROXY` 必须 `socks5://` 不是 `http://`&quot;"></a></h2>
+<blockquote>
+<p>Source: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/2026-05/28-telegram-proxy-http-vs-socks5.md" target="_blank" rel="noreferrer">incidents/2026-05/28-telegram-proxy-http-vs-socks5.md</a></p>
+</blockquote>
+<p><strong>问题</strong>: Clash / PassWall / sing-box 默认走 <strong>SOCKS5</strong>, 不是 HTTP. 如果
+<code>TELEGRAM_PROXY=http://127.0.0.1:7890</code>, Hermes gateway.log 报
+<code>Server disconnected</code> 自动重连, <strong>state 显示 &quot;connected&quot; 是 stale 假阳性</strong>。</p>
+<p><strong>正解</strong>:</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># .env</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">TELEGRAM_PROXY</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">socks5://127.0.0.1:7890</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">#   ^^^^^^^^ 强制 scheme, 不是 http://</span></span></code></pre>
+</div><p><strong>自查</strong>:</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">mihomo_log</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">find</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/Library/Application</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">\ </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">Support/mihomo-party</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -name</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "core-*.log"</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> tail</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$TELEGRAM_PROXY</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$mihomo_log</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -E</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "ERR|failed"</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> tail</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -3</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 期望 0 匹配</span></span></code></pre>
+</div><hr>
+<h2 id="坑-2-telegram-allowed-chats-必须是-chat-id-不是-bot-id" tabindex="-1">坑 2: <code>telegram.allowed_chats</code> 必须是 <code>chat_id</code> 不是 <code>bot_id</code> <a class="header-anchor" href="#坑-2-telegram-allowed-chats-必须是-chat-id-不是-bot-id" aria-label="Permalink to &quot;坑 2: `telegram.allowed_chats` 必须是 `chat_id` 不是 `bot_id`&quot;"></a></h2>
+<blockquote>
+<p>Source: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/2026-05/20-telegram-chatid-vs-botid.md" target="_blank" rel="noreferrer">incidents/2026-05/20-telegram-chatid-vs-botid.md</a></p>
+</blockquote>
+<p><strong>问题</strong>: <code>@BotFather</code> 给的 bot <code>bot_id</code> (例如 <code>8765399418</code>) 跟你的 personal
+<code>chat_id</code> (例如 <code>1521667184</code>) 是<strong>两个不同数字</strong>。填错就 bot 收自己消息循环
+或无消息。</p>
+<p><strong>正解</strong>: 从 gateway.log 找 inbound message:</p>
+<div class="language-yaml vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">yaml</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># config.yaml</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">telegram</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  allowed_chats</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">1521667184</span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">    # 你的 chat_id, 不是 bot_id</span></span></code></pre>
+</div><p><strong>找你的 chat_id</strong>:</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 临时清 allowlist 让所有消息都进</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sed</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -i.bak</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> 's/allowed_chats: .*/allowed_chats: ""/'</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.hermes/config.yaml</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">hermes</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> gateway</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> restart</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 给 bot 发任何消息</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "inbound message"</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.hermes/logs/gateway.log</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> tail</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -1</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># chat_id=&#x3C;你的数字>  ← 这个</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 恢复 + 加 allowlist</span></span></code></pre>
+</div><hr>
+<h2 id="坑-3-write-file-patch-对中国古典文本-silent-fail" tabindex="-1">坑 3: <code>write_file</code> / <code>patch</code> 对中国古典文本 silent fail <a class="header-anchor" href="#坑-3-write-file-patch-对中国古典文本-silent-fail" aria-label="Permalink to &quot;坑 3: `write_file` / `patch` 对中国古典文本 silent fail&quot;"></a></h2>
+<blockquote>
+<p>Source: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/2026-06/04-write-file-sensitive-string-silent-fail.md" target="_blank" rel="noreferrer">incidents/2026-06/04-write-file-sensitive-string-silent-fail.md</a></p>
+</blockquote>
+<p><strong>问题</strong>: 写大段<strong>中国古诗 / 古典文本</strong> (&gt;1500 字符 + parallel couplet 模式)
+时, 工具返 <code>{&quot;success&quot;: true, &quot;bytes_written&quot;: N}</code> 但<strong>实际没写</strong>到磁盘。</p>
+<p><strong>对策</strong>:</p>
+<ul>
+<li>写完后<strong>必 verify</strong> (<code>wc -c file</code> 对比期望, 或 <code>head -3 file</code> 看头 3 行)</li>
+<li>大段古文<strong>拆成 2-3 段</strong>写</li>
+<li>SKILL.md 写完必 <code>grep -c '关键词' SKILL.md</code> 验关键 token 真写入</li>
+</ul>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 写完后验证 (铁律)</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">wc</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -c</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> reference/protocol/feishu_inbox_protocol.md</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">md5</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -q</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> reference/protocol/feishu_inbox_protocol.md</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 对比 git HEAD 同路径</span></span></code></pre>
+</div><hr>
+<h2 id="坑-4-memory-工具用-old-text-不是-old-string" tabindex="-1">坑 4: <code>memory</code> 工具用 <code>old_text</code> 不是 <code>old_string</code> <a class="header-anchor" href="#坑-4-memory-工具用-old-text-不是-old-string" aria-label="Permalink to &quot;坑 4: `memory` 工具用 `old_text` 不是 `old_string`&quot;"></a></h2>
+<blockquote>
+<p>Source: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/2026-06/05-memory-old-string-vs-old-text.md" target="_blank" rel="noreferrer">incidents/2026-06/05-memory-old-string-vs-old-text.md</a> + <a href="https://github.com/veawho/via54Hermes/blob/main/references/memory-api-pitfalls.md" target="_blank" rel="noreferrer">references/memory-api-pitfalls.md</a></p>
+</blockquote>
+<p><strong>问题</strong>: <code>memory</code> 跟 <code>patch</code> 工具字段名<strong>故意不同</strong>, 用错<strong>silent fail</strong>:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>工具</th>
+<th>字段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>patch</code></td>
+<td><code>old_string</code> / <code>new_string</code></td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td><code>old_text</code> / <code>content</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>正解</strong>:</p>
+<div class="language-python vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># ✅ 正确</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">memory(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">action</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"replace"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">target</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"memory"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">       old_text</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"model: MiniMax-M2.7 (default)"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">       content</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"model: MiniMax-M3 (default)"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># ❌ silent fail (用 patch 字段名)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">memory(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">action</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"replace"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">target</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"memory"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">       old_string</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"model: MiniMax-M2.7 (default)"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,  </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 错字段名</span></span>
+<span class="line"><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70">       content</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"model: MiniMax-M3 (default)"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
+</div><p><strong>自查</strong>:</p>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 改 memory 后必 verify (memory 没 diff output, 用 get 看实际内容)</span></span></code></pre>
+</div><hr>
+<h2 id="坑-5-hermes-config-set-model-flatten-nested-mapping" tabindex="-1">坑 5: <code>hermes config set model</code> flatten nested mapping <a class="header-anchor" href="#坑-5-hermes-config-set-model-flatten-nested-mapping" aria-label="Permalink to &quot;坑 5: `hermes config set model` flatten nested mapping&quot;"></a></h2>
+<blockquote>
+<p>Source: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/2026-06/09-config-set-model-flattened.md" target="_blank" rel="noreferrer">incidents/2026-06/09-config-set-model-flattened.md</a></p>
+</blockquote>
+<p><strong>问题</strong>: <code>hermes config set model &lt;name&gt;</code> 是 flat key-value setter, <strong>不保留
+nested mappings</strong>:</p>
+<div class="language-yaml vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">yaml</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 改前 (嵌套)</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">model</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  default</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">MiniMax-M3</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  provider</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">minimax-cn</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">  base_url</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">''</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 改后 (collapsed, provider 字段丢了)</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">model</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">MiniMax-M3</span></span></code></pre>
+</div><p><strong>对策</strong>:</p>
+<ul>
+<li><strong>不要用</strong> <code>hermes config set model &lt;name&gt;</code> 改 model — 改完会丢 <code>provider</code></li>
+<li><strong>手动改</strong> <code>~/.hermes/config.yaml</code> 保持嵌套:</li>
+</ul>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># ✅ 推荐: 直接 sed 改 nested</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">sed</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -i</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> 's/  default: .*/  default: MiniMax-M3/'</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.hermes/config.yaml</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">hermes</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> gateway</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> restart</span></span></code></pre>
+</div><hr>
+<h2 id="_5-架构-svg-per-via54hermes" tabindex="-1">5 架构 SVG (per via54Hermes) <a class="header-anchor" href="#_5-架构-svg-per-via54hermes" aria-label="Permalink to &quot;5 架构 SVG (per via54Hermes)&quot;"></a></h2>
+<p>via54Hermes 提供了 5 个<strong>dark-themed SVG</strong> 架构图 (无外部依赖):</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>SVG</th>
+<th>节点数</th>
+<th>主题</th>
+<th>跟 Larkbotgo 关系</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>deployment-topology.svg</code></td>
+<td>144</td>
+<td>Windows + WSL 全部署 (流程/端口/路径)</td>
+<td>⚠ 跟 macOS 单机<strong>不直接对应</strong></td>
+</tr>
+<tr>
+<td><code>gateway-lifecycle.svg</code></td>
+<td>112</td>
+<td>gateway state machine (start/stop/restart/crash)</td>
+<td>✅ Hermes gateway 状态机一致</td>
+</tr>
+<tr>
+<td><code>state-db-pipeline.svg</code></td>
+<td>119</td>
+<td>FTS5 corruption 5 步 recovery</td>
+<td>✅ 跟 Larkfix <code>state.db</code> 整合</td>
+</tr>
+<tr>
+<td><code>api-server-routing.svg</code></td>
+<td>156</td>
+<td>Desktop → api_server :8642 routes</td>
+<td>✅ 跟 <code>~/.hermes/api</code> 整合</td>
+</tr>
+<tr>
+<td><code>telegram-data-flow.svg</code></td>
+<td>145</td>
+<td>User → socks5 → telethon → gateway → LLM</td>
+<td>✅ 跟坑 1 完全对应</td>
+</tr>
+</tbody>
+</table>
+<p>SVG 路径: <code>~/Desktop/developments/via54Hermes/assets/diagrams/*.svg</code></p>
+<hr>
+<h2 id="真相源-source-of-truth" tabindex="-1">真相源 (Source of Truth) <a class="header-anchor" href="#真相源-source-of-truth" aria-label="Permalink to &quot;真相源 (Source of Truth)&quot;"></a></h2>
+<p>via54Larkbotgo 跟 Hermes 整合的所有真相, 都在:</p>
+<ul>
+<li><strong>本地</strong>: <code>~/Desktop/developments/via54Hermes/</code> (cloned from <code>veawho/via54Hermes</code>)</li>
+<li><strong>README</strong>: <a href="https://github.com/veawho/via54Hermes" target="_blank" rel="noreferrer">github.com/veawho/via54Hermes</a> (private)</li>
+<li><strong>incidents 索引</strong>: <a href="https://github.com/veawho/via54Hermes/blob/main/incidents/TIMELINE.md" target="_blank" rel="noreferrer">incidents/TIMELINE.md</a></li>
+<li><strong>references 索引</strong>: <a href="https://github.com/veawho/via54Hermes/tree/main/references" target="_blank" rel="noreferrer">references/</a></li>
+</ul>

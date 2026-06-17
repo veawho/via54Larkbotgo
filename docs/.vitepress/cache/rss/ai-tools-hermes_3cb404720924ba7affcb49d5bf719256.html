@@ -1,0 +1,157 @@
+<h1 id="hermes-integration-pattern-a-in-depth" tabindex="-1">Hermes integration (Pattern A in depth) <a class="header-anchor" href="#hermes-integration-pattern-a-in-depth" aria-label="Permalink to &quot;Hermes integration (Pattern A in depth)&quot;"></a></h1>
+<blockquote>
+<p><strong>Pattern A in depth</strong>: Hermes is the only AI tool currently running in
+this setup, so this section is the end-to-end landing reference. Other
+AI tools (OpenClaw / Codex / Qclaw / antigravity / minimax-code) use the
+same inbox/outbox pattern; the only difference is the inbox_watcher side
+is each framework's own daemon.</p>
+</blockquote>
+<h2 id="system-architecture-running-locally" tabindex="-1">System architecture (running locally) <a class="header-anchor" href="#system-architecture-running-locally" aria-label="Permalink to &quot;System architecture (running locally)&quot;"></a></h2>
+<div class="language- vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span>┌────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  macOS 26.5.1 (daviddeMac-mini)                          │</span></span>
+<span class="line"><span>│                                                            │</span></span>
+<span class="line"><span>│  ┌──────────────────┐    ┌────────────────────────────┐  │</span></span>
+<span class="line"><span>│  │ feishu_bot_      │    │  feishu                    │  │</span></span>
+<span class="line"><span>│  │ daemon.py        │←──→│  ~/.local/bin/feishu       │  │</span></span>
+<span class="line"><span>│  │ (851 lines,      │    │  (CLI wrapper, 19KB)        │  │</span></span>
+<span class="line"><span>│  │  v20.7)          │    └────────────────────────────┘  │</span></span>
+<span class="line"><span>│  │                  │                                    │</span></span>
+<span class="line"><span>│  │ ~/hermes/scripts/│    ┌────────────────────────────┐  │</span></span>
+<span class="line"><span>│  │ feishu_bot_      │    │ inbox_watcher.py            │  │</span></span>
+<span class="line"><span>│  │ daemon.py        │    │ ~/hermes/scripts/          │  │</span></span>
+<span class="line"><span>│  └──────────────────┘    │  (570 lines, fsnotify)      │  │</span></span>
+<span class="line"><span>│           │                └────────────────────────────┘  │</span></span>
+<span class="line"><span>│           │                           │                  │</span></span>
+<span class="line"><span>│           ▼                           ▼                  │</span></span>
+<span class="line"><span>│  ┌──────────────────────────────────────────────┐         │</span></span>
+<span class="line"><span>│  │ /tmp/hermes_inbox/  (bot → watcher)         │         │</span></span>
+<span class="line"><span>│  │ /tmp/hermes_outbox/  (watcher → bot)        │         │</span></span>
+<span class="line"><span>│  │ /tmp/feishu_bot.pid /tmp/inbox_watcher.pid   │         │</span></span>
+<span class="line"><span>│  └──────────────────────────────────────────────┘         │</span></span>
+<span class="line"><span>│                                                            │</span></span>
+<span class="line"><span>│  Hermes Agent LLM call (minimax-cn / GLM-4.6)           │</span></span>
+<span class="line"><span>└────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   Feishu WS long-connection (wss://msg-frontier.feishu.cn/ws/v2)</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            ▼</span></span>
+<span class="line"><span>   Feishu user (DM / group @bot)</span></span></code></pre>
+</div><h2 id="install-macos-currently-running" tabindex="-1">Install (macOS, currently running) <a class="header-anchor" href="#install-macos-currently-running" aria-label="Permalink to &quot;Install (macOS, currently running)&quot;"></a></h2>
+<h3 id="prerequisites" tabindex="-1">Prerequisites <a class="header-anchor" href="#prerequisites" aria-label="Permalink to &quot;Prerequisites&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 1. Feishu app already created</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">#    In https://open.feishu.cn/app backend, create enterprise custom app:</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">#    - Capability: bot</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">#    - Event subscription: im.message.receive_v1 (mandatory)</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D">#    - Permissions: see reference/permissions.md</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 2. App ID + App Secret at ~/.config/feishu/credentials.json</span></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> '{"app_id": "cli_xxxx", "app_secret": "yyyyy"}'</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> ></span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/feishu/credentials.json</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> 600</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.config/feishu/credentials.json</span></span></code></pre>
+</div><h3 id="install-python-dependencies" tabindex="-1">Install Python dependencies <a class="header-anchor" href="#install-python-dependencies" aria-label="Permalink to &quot;Install Python dependencies&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.hermes/bin/uv pip install --python </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">~</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">/.venvs/feishu-cli/bin/python3 </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">\</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">  lark-oapi</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> websockets</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> cryptography</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> requests</span></span></code></pre>
+</div><h3 id="deploy-bot-daemon-python-version-go-skeleton-is-the-future-replacement-target" tabindex="-1">Deploy bot daemon (Python version; Go skeleton is the future replacement target) <a class="header-anchor" href="#deploy-bot-daemon-python-version-go-skeleton-is-the-future-replacement-target" aria-label="Permalink to &quot;Deploy bot daemon (Python version; Go skeleton is the future replacement target)&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 1. Copy daemons</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cp</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /Users/david/.hermes/scripts/feishu_bot_daemon.py</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.hermes/scripts/</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cp</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /Users/david/.hermes/scripts/inbox_watcher.py</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/.hermes/scripts/</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 2. Install launchd plists (macOS auto-start)</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cp</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /Users/david/.hermes/scripts/com.david.feishu-bot.plist</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/Library/LaunchAgents/</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">cp</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> /Users/david/.hermes/scripts/com.david.inbox-watcher.plist</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> ~/Library/LaunchAgents/</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># 3. Start</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">launchctl</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> bootstrap</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> gui/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">id</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -u</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">~/Library/LaunchAgents/com.david.feishu-bot.plist</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">launchctl</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> bootstrap</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> gui/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">$(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">id</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -u</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">) </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">~/Library/LaunchAgents/com.david.inbox-watcher.plist</span></span></code></pre>
+</div><h3 id="verify" tabindex="-1">Verify <a class="header-anchor" href="#verify" aria-label="Permalink to &quot;Verify&quot;"></a></h3>
+<div class="language-bash vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">bash</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Check feishu bot process</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">ps</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> aux</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> feishu_bot_daemon</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -v</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> grep</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># See PID = really running</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Check Feishu WS connection</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0">lsof</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -nP</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> &#x3C;</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">PI</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">D</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583">></span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> |</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0"> grep</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF"> "msg-frontier"</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># See wss://msg-frontier.feishu.cn/ws/v2 = WS long-connection established</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Test: in Feishu, DM the bot or @bot in a group</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Expected: ~/.hermes/logs/inbox-watcher.out.log shows "processing msg_id=..."</span></span>
+<span class="line"><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D"># Expected: Feishu receives LLM reply</span></span></code></pre>
+</div><h2 id="configure-inbox-watcher" tabindex="-1">Configure inbox_watcher <a class="header-anchor" href="#configure-inbox-watcher" aria-label="Permalink to &quot;Configure inbox_watcher&quot;"></a></h2>
+<p><code>inbox_watcher.py</code> defaults to calling the <code>hermes</code> CLI (at <code>~/.hermes/hermes-agent/venv/bin/</code>):</p>
+<div class="language-python vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">python</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">HERMES_CMD</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8"> [</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    "/Users/david/.hermes/hermes-agent/venv/bin/hermes"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    "agent"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"run"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"--model"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"minimax-cn/MiniMax-M3"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    "--prompt"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF">{text}</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">    "--max-turns"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF">"5"</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">]</span></span></code></pre>
+</div><p>Switch model: change <code>--model</code> (e.g. <code>--model anthropic/claude-sonnet-4</code>).</p>
+<h2 id="replace-with-go-skeleton-todo" tabindex="-1">Replace with Go skeleton (TODO) <a class="header-anchor" href="#replace-with-go-skeleton-todo" aria-label="Permalink to &quot;Replace with Go skeleton (TODO)&quot;"></a></h2>
+<p><code>main.go</code> is the Go skeleton; once Hermes E2E verifies, replace the Python daemon:</p>
+<ol>
+<li>
+<p>Edit <code>~/Library/LaunchAgents/com.david.feishu-bot.plist</code>:</p>
+<div class="language-xml vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">xml</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0" v-pre=""><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">&#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">key</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>ProgramArguments&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">key</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">&#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">array</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>~/Desktop/developments/via54Larkbotgo/bin/via54Larkbotgo&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>--app-id&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>cli_xxx&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>--app-secret&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">>yyy&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">&#x3C;/</span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D">array</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8">></span></span></code></pre>
+</div></li>
+<li>
+<p><code>launchctl bootout</code> + <code>launchctl bootstrap</code> to restart</p>
+</li>
+<li>
+<p>Hermes <code>inbox_watcher.py</code> <strong>stays unchanged</strong> — it only reads inbox JSON, doesn't care what language the bot is in</p>
+</li>
+</ol>
+<h2 id="known-issues" tabindex="-1">Known issues <a class="header-anchor" href="#known-issues" aria-label="Permalink to &quot;Known issues&quot;"></a></h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Issue</th>
+<th>Workaround</th>
+<th>Permanent fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Bootstrap failed: 5: Input/output error</code> (launchd throttle)</td>
+<td>wait 60-90s, or <code>sudo launchctl</code></td>
+<td>reduce rapid restart cycles</td>
+</tr>
+<tr>
+<td><code>WARN: running with non-venv python</code> (hermes-agent venv path detection)</td>
+<td>ignore (defensive warn)</td>
+<td>fix daemon.py detection logic</td>
+</tr>
+<tr>
+<td>macOS Sequoia <code>com.apple.provenance</code> xattr</td>
+<td>call <code>~/.local/bin/feishu</code> directly, not via launchd plist</td>
+<td>(known limitation)</td>
+</tr>
+<tr>
+<td><code>/usr/local/bin/via54</code> install rejected by spctl</td>
+<td>install to <code>~/.local/bin/via54</code> to skip quarantine</td>
+<td>(macOS standard practice)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="migration-to-other-ai-tools" tabindex="-1">Migration to other AI tools <a class="header-anchor" href="#migration-to-other-ai-tools" aria-label="Permalink to &quot;Migration to other AI tools&quot;"></a></h2>
+<p><code>inbox_watcher</code> is decoupled from Hermes. Any AI tool that can implement
+&quot;read /tmp/hermes_inbox/<em>.json → call LLM → write /tmp/hermes_outbox/</em>.json&quot;
+is compatible:</p>
+<ul>
+<li><strong>OpenClaw</strong>: write <code>openclaw_inbox_bridge.py</code> using OpenClaw's <code>agent.run()</code> API</li>
+<li><strong>Codex CLI</strong>: write <code>codex_inbox_bridge.sh</code> calling <code>codex --prompt {text}</code></li>
+<li><strong>Claude Code</strong>: write <code>claude_bridge.py</code> using Anthropic SDK + Feishu streaming</li>
+<li><strong>Qclaw / antigravity / minimax-code</strong>: each framework similar</li>
+</ul>
+<h2 id="related" tabindex="-1">Related <a class="header-anchor" href="#related" aria-label="Permalink to &quot;Related&quot;"></a></h2>
+<ul>
+<li><a href="./../protocol/feishu-inbox-protocol">inbox/outbox protocol</a></li>
+<li><a href="./../reference/permissions">Permissions</a></li>
+<li><a href="./../reference/ai-tools-matrix">AI tools matrix</a></li>
+<li><a href="./../guides/install-macos">macOS install</a></li>
+<li><a href="./../guides/e2e-hermes-bot">E2E example</a></li>
+</ul>
