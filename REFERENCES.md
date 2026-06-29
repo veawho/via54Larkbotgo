@@ -33,6 +33,20 @@
 
 ---
 
+
+## Top 高星项目 (2026-06-29 audit, by stars)
+
+| Project | ★ Stars | 描述 | Link |
+|---------|---------|------|------|
+| larksuite/cli | 14,838 | Official Lark/Feishu CLI tool | [GitHub](https://github.com/larksuite/cli) |
+| chenhg5/cc-connect | 13,243 | Bridge AI agents (Claude/Cursor) to Feishu | [GitHub](https://github.com/chenhg5/cc-connect) |
+| langbot-app/LangBot | 16,558 | Agentic IM bots multi-platform | [GitHub](https://github.com/langbot-app/LangBot) |
+| ConnectAI-E/feishu-openai | 5,640 | Feishu + GPT-4 (V/DALL-E/Whisper) | [GitHub](https://github.com/ConnectAI-E/feishu-openai) |
+
+_Inspired by these projects, see CHANGELOG for integration plans._
+
+---
+
 ## English
 
 This project is part of the via54 series. Explore the via54 ecosystem:

@@ -162,3 +162,15 @@ md5 -q via54Larkfix/common/bot/feishu_bot_daemon.py \
 - **[via54Skills](https://github.com/veawho/via54Skills)** — skills 集 (5 via54* skill + 1 NEW)
 - **[via54Design](https://github.com/veawho/via54Design)** — Go 设计引擎 (v0.5.0 / v0.6.0)
 - **[CAPABILITY_MATRIX](../CAPABILITY_MATRIX.md)** — 跨仓库状态文档 (12 章节)
+
+
+## 🔗 集成 (v1.0.0 新增)
+
+via54Larkbotgo v1.0.0 跟踪 4 个高星飞书生态项目, 学习它们的 AI agent bridge 模式:
+
+- [larksuite/cli](https://github.com/larksuite/cli) (14.8K) - 官方 Lark/Feishu CLI
+- [chenhg5/cc-connect](https://github.com/chenhg5/cc-connect) (13.2K) - Bridge AI agents to Feishu
+- [langbot-app/LangBot](https://github.com/langbot-app/LangBot) (16.5K) - Agentic IM bots multi-platform
+- [ConnectAI-E/feishu-openai](https://github.com/ConnectAI-E/feishu-openai) (5.6K) - Feishu + GPT-4
+
+详见 [integrations/README.md](integrations/README.md) 和 [REFERENCES.md](REFERENCES.md).
