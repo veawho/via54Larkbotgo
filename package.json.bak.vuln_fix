@@ -1,0 +1,28 @@
+{
+  "name": "via54larkbotgo",
+  "version": "1.0.0",
+  "description": "> **飞书 (Feishu/Lark) WS 长连接 bot,Go 改写中**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/veawho/via54Larkbotgo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/veawho/via54Larkbotgo/issues"
+  },
+  "homepage": "https://github.com/veawho/via54Larkbotgo#readme",
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-rss": "^0.4.4",
+    "vitepress-sidebar": "^1.36.1"
+  }
+}
