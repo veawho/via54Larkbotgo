@@ -1,5 +1,9 @@
 # via54Larkbotgo
 
+
+> **🌐 Language**: [🇨🇳 中文](./README.md) | [🇺🇸 English](#) (current)
+>
+> _This document is in English. For Chinese, click above._
 > Feishu/Lark bot cross-OS integration (macOS/Windows/Linux), AI agent support (Hermes/OpenClaw/Codex/Claude)
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
