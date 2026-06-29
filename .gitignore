@@ -61,3 +61,4 @@ bin/
 *.out
 *.exe
 backups/
+node_modules/
